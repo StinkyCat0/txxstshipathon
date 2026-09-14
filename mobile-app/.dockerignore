@@ -1,0 +1,12 @@
+node_modules
+.expo
+.expo-shared
+dist
+web-build
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+*.log
+npm-debug.log*
