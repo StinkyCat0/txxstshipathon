@@ -3,6 +3,7 @@
  * (we pop from the end so the array order matches fetch order).
  */
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -106,58 +107,72 @@ function SwipeCard({
           },
           animatedStyle,
         ]}>
-        {/* Photo fills the top; floating pass/like buttons sit on the seam. */}
-        <View style={styles.cardPhoto}>
-          {photo ? (
-            <Image
-              source={{ uri: photo }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.photoPlaceholder]}>
-              <ThemedText type="title" themeColor="textSecondary">
-                {profile.name.charAt(0)}
-              </ThemedText>
-            </View>
-          )}
-          <View style={styles.cardActions}>
-            <Pressable
-              accessibilityLabel="Pass"
-              onPress={() => fling('left')}
-              style={[styles.cardAction, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText style={styles.cardActionGlyph}>✕</ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Like"
-              onPress={() => fling('right')}
-              style={[styles.cardAction, { backgroundColor: theme.accentSoft }]}>
-              <ThemedText style={[styles.cardActionGlyph, { color: theme.accent }]}>
-                ♥
-              </ThemedText>
-            </Pressable>
+        {/* Photo fills the whole card, cropped to keep every edge covered. */}
+        {photo ? (
+          <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.photoPlaceholder]}>
+            <ThemedText type="title" themeColor="textSecondary">
+              {profile.name.charAt(0)}
+            </ThemedText>
           </View>
-        </View>
+        )}
+
+        {/* Scrim: keeps the overlay text readable without backing it. */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.75)']}
+          locations={[0.35, 1]}
+          style={styles.gradient}
+        />
 
         {/* Info block: name/age, bio, first prompt — tap expands full profile. */}
         <View style={styles.cardInfo}>
-          <ThemedText type="subtitle" style={styles.cardName}>
-            {profile.name}, {profile.age}
-          </ThemedText>
-          {!!profile.bio && (
-            <ThemedText themeColor="textSecondary" numberOfLines={2} style={styles.cardBio}>
-              {profile.bio}
-            </ThemedText>
-          )}
+          <View style={styles.cardInfoRow}>
+            <View style={styles.cardInfoText}>
+              <ThemedText type="subtitle" style={styles.cardName}>
+                {profile.name}, {profile.age}
+              </ThemedText>
+              {!!profile.bio && (
+                <ThemedText numberOfLines={2} style={styles.cardBio}>
+                  {profile.bio}
+                </ThemedText>
+              )}
+            </View>
+            <View style={styles.cardActions}>
+              <Pressable
+                accessibilityLabel="Pass"
+                onPress={() => fling('left')}
+                style={[
+                  styles.cardAction,
+                  styles.cardActionAbove,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <ThemedText style={styles.cardActionGlyph}>✕</ThemedText>
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Like"
+                onPress={() => fling('right')}
+                style={[styles.cardAction, { backgroundColor: theme.accentSoft }]}>
+                <ThemedText style={[styles.cardActionGlyph, { color: theme.accent }]}>
+                  ♥
+                </ThemedText>
+              </Pressable>
+            </View>
+          </View>
           {!!firstPrompt && (
-            <ThemedView type="backgroundSelected" style={styles.promptCard}>
+            // Keeps its backing, but translucent so the photo reads through.
+            <View
+              style={[
+                styles.promptCard,
+                { backgroundColor: `${theme.backgroundSelected}B3` },
+              ]}>
               <ThemedText type="small" themeColor="textSecondary">
                 {promptLabel(firstPrompt.prompt_key)}
               </ThemedText>
               <ThemedText numberOfLines={2} style={styles.promptAnswer}>
                 {firstPrompt.answer}
               </ThemedText>
-            </ThemedView>
+            </View>
           )}
         </View>
       </Animated.View>
@@ -243,15 +258,13 @@ export default function SwipeScreen() {
                         borderColor: theme.backgroundSelected,
                       },
                     ]}>
-                    <View style={styles.cardPhoto}>
-                      {mediaUrl(next.photos[0]) ? (
-                        <Image
-                          source={{ uri: mediaUrl(next.photos[0]) }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
-                        />
-                      ) : null}
-                    </View>
+                    {mediaUrl(next.photos[0]) ? (
+                      <Image
+                        source={{ uri: mediaUrl(next.photos[0]) }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                      />
+                    ) : null}
                   </View>
                 )}
                 <SwipeCard
@@ -345,17 +358,28 @@ const styles = StyleSheet.create({
   cardBehind: {
     transform: [{ scale: 0.95 }],
   },
-  cardPhoto: { flex: 3 },
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '55%',
+    pointerEvents: 'none',
+  },
   photoPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Stacked in the info block: the heart sits inline with the name, and the
+  // pass button floats directly above it, out of flow so it can't push the
+  // text down.
   cardActions: {
+    flexDirection: 'column',
+  },
+  cardActionAbove: {
     position: 'absolute',
-    right: Spacing.three,
-    bottom: -22,
-    flexDirection: 'row',
-    gap: Spacing.two,
+    bottom: '100%',
+    marginBottom: Spacing.two,
   },
   cardAction: {
     width: 48,
@@ -371,13 +395,19 @@ const styles = StyleSheet.create({
   },
   cardActionGlyph: { fontSize: 20, lineHeight: 24 },
   cardInfo: {
-    flex: 2,
+    flex: 1,
+    justifyContent: 'flex-end',
     padding: Spacing.three,
-    paddingTop: Spacing.four,
     gap: Spacing.two,
   },
-  cardName: { fontSize: 26, lineHeight: 32 },
-  cardBio: { fontSize: 15, lineHeight: 20 },
+  cardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+  },
+  cardInfoText: { flex: 1, gap: Spacing.two },
+  cardName: { color: '#fff', fontSize: 26, lineHeight: 32 },
+  cardBio: { color: 'rgba(255,255,255,0.85)', fontSize: 15, lineHeight: 20 },
   promptCard: {
     borderRadius: Spacing.three,
     padding: Spacing.three,

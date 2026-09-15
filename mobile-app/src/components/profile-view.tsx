@@ -11,20 +11,32 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { mediaUrl, type Profile } from '@/lib/api';
 import { promptLabel } from '@/lib/prompts';
-import { useTheme } from '@/hooks/use-theme';
+
+type Block = { kind: 'photo' | 'prompt'; index: number };
 
 export function ProfileView({ profile }: { profile: Profile }) {
-  const theme = useTheme();
   // Interleave: photo[0], prompt[0], photo[1], prompt[1], ...
-  const blocks: { kind: 'photo' | 'prompt'; index: number }[] = [];
+  const blocks: Block[] = [];
   const n = Math.max(profile.photos.length, profile.prompts.length);
   for (let i = 0; i < n; i++) {
     if (i < profile.photos.length) blocks.push({ kind: 'photo', index: i });
     if (i < profile.prompts.length) blocks.push({ kind: 'prompt', index: i });
   }
 
+  // Name/age/bio sit under the lead photo. With no photos there is nothing to
+  // sit under, so they lead.
+  const lead = blocks[0]?.kind === 'photo' ? blocks[0] : null;
+  const rest = lead ? blocks.slice(1) : blocks;
+
   return (
     <View style={styles.root}>
+      {lead && (
+        <Image
+          source={{ uri: mediaUrl(profile.photos[lead.index]) }}
+          style={styles.photo}
+          contentFit="cover"
+        />
+      )}
       <View style={styles.header}>
         <ThemedText type="subtitle">
           {profile.name}, {profile.age}
@@ -35,7 +47,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
           </ThemedText>
         )}
       </View>
-      {blocks.map((b, i) =>
+      {rest.map((b, i) =>
         b.kind === 'photo' ? (
           <Image
             key={`p${i}`}
