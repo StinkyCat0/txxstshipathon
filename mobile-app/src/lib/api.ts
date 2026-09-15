@@ -48,6 +48,7 @@ export interface Profile {
   name: string;
   age: number;
   bio: string;
+  location: string;
   gender: string;
   interested_in: string;
   profile_complete: boolean;
@@ -164,10 +165,10 @@ async function uploadFile<T>(
 export const api = {
   listUsers: () => req<UserSummary[]>('GET', '/users'),
 
-  createUser: (input: { name: string; age: number; bio?: string; gender?: string; interested_in?: string }) =>
+  createUser: (input: { name: string; age: number; bio?: string; location?: string; gender?: string; interested_in?: string }) =>
     req<{ id: number; token: string }>('POST', '/users', input),
 
-  updateUser: (id: number, patch: Partial<{ name: string; age: number; bio: string; gender: string; interested_in: string }>) =>
+  updateUser: (id: number, patch: Partial<{ name: string; age: number; bio: string; location: string; gender: string; interested_in: string }>) =>
     req<Profile>('PATCH', `/users/${id}`, patch),
 
   getProfile: (id: number) => req<Profile>('GET', `/profiles/${id}`),

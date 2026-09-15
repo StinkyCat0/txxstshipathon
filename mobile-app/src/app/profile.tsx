@@ -27,6 +27,7 @@ export default function ProfileScreen() {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [bio, setBio] = useState('');
+  const [location, setLocation] = useState('');
   const [prompts, setPrompts] = useState<PromptAnswer[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
     setName(p.name);
     setAge(String(p.age));
     setBio(p.bio);
+    setLocation(p.location);
     setPrompts(
       Array.from(
         { length: PROMPT_SLOTS },
@@ -62,7 +64,7 @@ export default function ProfileScreen() {
     if (userId === null || userId === 0) return;
     setSaving(true);
     try {
-      const patch: Parameters<typeof api.updateUser>[1] = { name, bio };
+      const patch: Parameters<typeof api.updateUser>[1] = { name, bio, location };
       const ageNum = parseInt(age, 10);
       if (!Number.isNaN(ageNum)) patch.age = ageNum;
       setProfile(await api.updateUser(userId, patch));
@@ -131,6 +133,10 @@ export default function ProfileScreen() {
               onChangeText={setAge}
               keyboardType="number-pad"
             />
+            <ThemedText type="small" themeColor="textSecondary">
+              Location
+            </ThemedText>
+            <TextInput style={inputStyle} value={location} onChangeText={setLocation} />
             <ThemedText type="small" themeColor="textSecondary">
               Bio
             </ThemedText>

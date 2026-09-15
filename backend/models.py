@@ -29,6 +29,7 @@ class User(SQLModel, table=True):
     name: str
     age: int
     bio: str = ""
+    location: str = ""
     gender: str = ""            # free-form for MVP
     interested_in: str = ""     # free-form for MVP
     profile_complete: bool = False
@@ -108,6 +109,7 @@ class UserCreate(SQLModel):
     name: str
     age: int
     bio: str = ""
+    location: str = ""
     gender: str = ""
     interested_in: str = ""
 
@@ -116,6 +118,7 @@ class UserUpdate(SQLModel):
     name: Optional[str] = None
     age: Optional[int] = None
     bio: Optional[str] = None
+    location: Optional[str] = None
     gender: Optional[str] = None
     interested_in: Optional[str] = None
 
@@ -136,6 +139,7 @@ class ProfileOut(SQLModel):
     name: str
     age: int
     bio: str
+    location: str
     gender: str
     interested_in: str
     profile_complete: bool
@@ -202,4 +206,13 @@ class MessageOut(SQLModel):
 
 def create_db_and_tables() -> None:
     UPLOADS_DIR.mkdir(exist_ok=True)
+    # create_all() never alters existing tables and app.db ships in the repo,
+    # so add the location column to pre-existing databases by hand.
+    with engine.connect() as conn:
+        columns = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(user)")}
+        if columns and "location" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE user ADD COLUMN location VARCHAR NOT NULL DEFAULT ''"
+            )
+            conn.commit()
     SQLModel.metadata.create_all(engine)

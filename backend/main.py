@@ -115,6 +115,7 @@ def profile_out(session: Session, user: User) -> ProfileOut:
         name=user.name,
         age=user.age,
         bio=user.bio,
+        location=user.location,
         gender=user.gender,
         interested_in=user.interested_in,
         profile_complete=user.profile_complete,
@@ -169,6 +170,7 @@ def create_user(body: UserCreate) -> dict:
             name=body.name,
             age=body.age,
             bio=body.bio,
+            location=body.location,
             gender=body.gender,
             interested_in=body.interested_in,
         )

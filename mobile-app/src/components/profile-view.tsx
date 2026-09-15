@@ -3,18 +3,21 @@
  * Used by the swipe deck, feed/leaderboard profile modal, and the You tab.
  */
 import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
 import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { mediaUrl, type Profile } from '@/lib/api';
 import { promptLabel } from '@/lib/prompts';
 
 type Block = { kind: 'photo' | 'prompt'; index: number };
 
 export function ProfileView({ profile }: { profile: Profile }) {
+  const theme = useTheme();
   // Interleave: photo[0], prompt[0], photo[1], prompt[1], ...
   const blocks: Block[] = [];
   const n = Math.max(profile.photos.length, profile.prompts.length);
@@ -41,6 +44,19 @@ export function ProfileView({ profile }: { profile: Profile }) {
         <ThemedText type="subtitle">
           {profile.name}, {profile.age}
         </ThemedText>
+        {!!profile.location && (
+          <View style={styles.location}>
+            <SymbolView
+              name="mappin.and.ellipse"
+              size={14}
+              tintColor={theme.textSecondary}
+              fallback={<ThemedText themeColor="textSecondary">📍</ThemedText>}
+            />
+            <ThemedText type="small" themeColor="textSecondary">
+              {profile.location}
+            </ThemedText>
+          </View>
+        )}
         {!!profile.bio && (
           <ThemedText themeColor="textSecondary" style={styles.bio}>
             {profile.bio}
@@ -99,6 +115,7 @@ export function ProfileModal({
 const styles = StyleSheet.create({
   root: { gap: Spacing.three },
   header: { gap: Spacing.one },
+  location: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   bio: { fontSize: 15 },
   photo: { width: '100%', aspectRatio: 3 / 4, borderRadius: Spacing.three },
   promptCard: {

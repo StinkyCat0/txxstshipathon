@@ -31,26 +31,26 @@ SEED_PHOTOS_DIR = Path(__file__).parent / "seed-photos"
 random.seed(42)
 
 USERS = [
-    ("Maya", 24, "F", "M", "Professional overthinker, amateur chef."),
-    ("Jordan", 27, "M", "F", "Will beat you at Mario Kart and deny it."),
-    ("Priya", 26, "F", "M", "Bookstore browser, chai enthusiast."),
-    ("Alex", 23, "NB", "everyone", "Here for the playlists and the chaos."),
-    ("Sam", 29, "M", "F", "Climbing walls and corporate ladders."),
-    ("Riley", 22, "F", "everyone", "Dog mom. The dog is a cat."),
-    ("Devon", 31, "M", "M", "Grill master seeking sous chef."),
-    ("Nina", 25, "F", "M", "Fluent in sarcasm and movie quotes."),
-    ("Kai", 28, "M", "F", "Surfer on weekends, spreadsheet goblin on weekdays."),
-    ("Zoe", 21, "F", "F", "Art kid. Will sketch you on the first date."),
-    ("Marcus", 34, "M", "F", "Old soul, young knees (barely)."),
-    ("Lena", 30, "F", "M", "Plant hoarder. 47 plants and counting."),
-    ("Omar", 26, "M", "everyone", "Foodie. I will judge your pizza order."),
-    ("Tara", 19, "F", "M", "Freshman energy, senior-year nap schedule."),
-    ("Ben", 33, "M", "F", "Dad jokes without the dad part."),
-    ("Ivy", 27, "F", "F", "Runner. Emotionally and literally."),
-    ("Chris", 25, "M", "F", "Gym rat with a soft spot for rom-coms."),
-    ("Aisha", 29, "F", "M", "Lawyer by day, karaoke menace by night."),
-    ("Leo", 24, "M", "everyone", "Astrophysics nerd. Ask me about black holes."),
-    ("Grace", 35, "F", "M", "Wine aunt energy, single by choice-ish."),
+    ("Maya", 24, "F", "M", "Professional overthinker, amateur chef.", "Brooklyn, NY"),
+    ("Jordan", 27, "M", "F", "Will beat you at Mario Kart and deny it.", "Austin, TX"),
+    ("Priya", 26, "F", "M", "Bookstore browser, chai enthusiast.", "London, UK"),
+    ("Alex", 23, "NB", "everyone", "Here for the playlists and the chaos.", "Berlin, DE"),
+    ("Sam", 29, "M", "F", "Climbing walls and corporate ladders.", "Denver, CO"),
+    ("Riley", 22, "F", "everyone", "Dog mom. The dog is a cat.", "Portland, OR"),
+    ("Devon", 31, "M", "M", "Grill master seeking sous chef.", "Nashville, TN"),
+    ("Nina", 25, "F", "M", "Fluent in sarcasm and movie quotes.", "Chicago, IL"),
+    ("Kai", 28, "M", "F", "Surfer on weekends, spreadsheet goblin on weekdays.", "San Diego, CA"),
+    ("Zoe", 21, "F", "F", "Art kid. Will sketch you on the first date.", "Providence, RI"),
+    ("Marcus", 34, "M", "F", "Old soul, young knees (barely).", "Atlanta, GA"),
+    ("Lena", 30, "F", "M", "Plant hoarder. 47 plants and counting.", "Seattle, WA"),
+    ("Omar", 26, "M", "everyone", "Foodie. I will judge your pizza order.", "Toronto, CA"),
+    ("Tara", 19, "F", "M", "Freshman energy, senior-year nap schedule.", "Boulder, CO"),
+    ("Ben", 33, "M", "F", "Dad jokes without the dad part.", "Boston, MA"),
+    ("Ivy", 27, "F", "F", "Runner. Emotionally and literally.", "Minneapolis, MN"),
+    ("Chris", 25, "M", "F", "Gym rat with a soft spot for rom-coms.", "Phoenix, AZ"),
+    ("Aisha", 29, "F", "M", "Lawyer by day, karaoke menace by night.", "Washington, DC"),
+    ("Leo", 24, "M", "everyone", "Astrophysics nerd. Ask me about black holes.", "Palo Alto, CA"),
+    ("Grace", 35, "F", "M", "Wine aunt energy, single by choice-ish.", "New Orleans, LA"),
 ]
 
 PROMPT_ANSWERS = {
@@ -206,8 +206,8 @@ def main():
         s.commit()
 
         users, n_photos_total, n_prompts_total = [], 0, 0
-        for i, (name, age, gender, interested_in, bio) in enumerate(USERS):
-            u = User(name=name, age=age, bio=bio, gender=gender,
+        for i, (name, age, gender, interested_in, bio, location) in enumerate(USERS):
+            u = User(name=name, age=age, bio=bio, location=location, gender=gender,
                      interested_in=interested_in, profile_complete=True)
             s.add(u)
             s.flush()
