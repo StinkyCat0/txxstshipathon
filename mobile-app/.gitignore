@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# local API runtime state (server/ arrives with the mvp-openly branch)
+server/data/
