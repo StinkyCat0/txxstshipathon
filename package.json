@@ -1,0 +1,10 @@
+{
+  "name": "txxstshipathon",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node mobile-app/scripts/dev.js",
+    "dev:api": "node mobile-app/scripts/dev.js --api-only",
+    "dev:mobile": "node mobile-app/scripts/dev.js --mobile-only"
+  }
+}

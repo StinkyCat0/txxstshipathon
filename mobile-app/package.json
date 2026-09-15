@@ -38,6 +38,9 @@
   },
   "scripts": {
     "start": "expo start",
+    "dev": "node scripts/dev.js",
+    "dev:api": "node scripts/dev.js --api-only",
+    "dev:mobile": "node scripts/dev.js --mobile-only",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
