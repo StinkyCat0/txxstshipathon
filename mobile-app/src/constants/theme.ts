@@ -16,6 +16,7 @@ export const Colors = {
     textSecondary: '#8E8E93', // Soft Gray
     accent: '#D97A93', // deep rose — hearts, links, active states
     accentSoft: '#FADADD', // Blush Pink fill for pills/cards
+    border: '#EAE2E3', // hairline divider on the flush feed wall
   },
   dark: {
     text: '#FFFFFF',
@@ -25,6 +26,7 @@ export const Colors = {
     textSecondary: '#8E8E93', // Soft Gray
     accent: '#E7A9B8',
     accentSoft: '#33262B',
+    border: '#2E3032', // hairline divider on the flush feed wall
   },
 } as const;
 

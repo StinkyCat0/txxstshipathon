@@ -1,6 +1,7 @@
 /**
  * One feed post: author header, text, optional image, like + comment actions.
- * Shared by the feed list and the post detail modal.
+ * Rendered as a flush full-width row on the feed wall, separated by hairline
+ * dividers; shared with the post detail modal.
  */
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
@@ -28,7 +29,7 @@ export function PostCard({
   const theme = useTheme();
 
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
+    <ThemedView style={styles.row}>
       <Pressable style={styles.header} onPress={() => onOpenProfile(post.author_id)}>
         <Image source={{ uri: mediaUrl(post.author_photo) }} style={styles.avatar} />
         <ThemedText type="smallBold">
@@ -80,9 +81,9 @@ export function PostCard({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
+  row: {
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
     gap: Spacing.two,
   },
   header: {

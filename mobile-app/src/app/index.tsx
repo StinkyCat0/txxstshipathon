@@ -129,7 +129,14 @@ export default function FeedScreen() {
               onOpenComments={setOpenPost}
             />
           )}
-          ListHeaderComponent={<PostComposer onPosted={(post) => setPosts((prev) => [post, ...prev])} />}
+          ListHeaderComponent={
+            <View style={[styles.composerWrap, { borderBottomColor: theme.border }]}>
+              <PostComposer onPosted={(post) => setPosts((prev) => [post, ...prev])} />
+            </View>
+          }
+          ItemSeparatorComponent={() => (
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          )}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -173,13 +180,19 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 32, height: 32, borderRadius: 16 },
   list: {
-    gap: Spacing.three,
-    padding: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
     flexGrow: 1,
+  },
+  composerWrap: {
+    padding: Spacing.three,
+    paddingBottom: Spacing.two,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
   },
   empty: {
     flex: 1,
