@@ -7,7 +7,17 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -104,6 +114,44 @@ export function PostComposer({ onPosted }: { onPosted: (post: Post) => void }) {
   );
 }
 
+/** Composer in a slide-up modal — opened by the tab bar's + button. */
+export function PostComposerModal({
+  visible,
+  onClose,
+  onPosted,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onPosted: (post: Post) => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      {/* Modals get their own window on iOS — nested provider for insets. */}
+      <SafeAreaProvider>
+        <ThemedView style={styles.modal}>
+          <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom']}>
+            <View style={styles.modalTopBar}>
+              <ThemedText type="linkPrimary" onPress={onClose}>
+                Cancel
+              </ThemedText>
+            </View>
+            <KeyboardAvoidingView
+              style={styles.flex}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <PostComposer
+                onPosted={(post) => {
+                  onPosted(post);
+                  onClose();
+                }}
+              />
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </ThemedView>
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: Spacing.three,
@@ -131,4 +179,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
+  modal: { flex: 1 },
+  modalSafe: { flex: 1, paddingHorizontal: Spacing.three },
+  modalTopBar: { paddingVertical: Spacing.two },
+  flex: { flex: 1 },
 });

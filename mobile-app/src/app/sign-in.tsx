@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProfileCard } from '@/components/profile-card';
+import { Wordmark } from '@/components/wordmark';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
@@ -115,9 +116,7 @@ export default function SignInScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <ThemedText type="title" style={styles.brand}>
-                risqué
-              </ThemedText>
+              <Wordmark width={160} />
               <ThemedText themeColor="textSecondary">dating, but everyone can see</ThemedText>
             </View>
 
@@ -171,10 +170,12 @@ export default function SignInScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.button,
-                  { backgroundColor: theme.backgroundElement },
-                  pressed && { backgroundColor: theme.backgroundSelected },
+                  { backgroundColor: theme.accentSoft },
+                  pressed && { opacity: 0.8 },
                 ]}>
-                <ThemedText type="smallBold">Create account</ThemedText>
+                <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                  ♥ Create account
+                </ThemedText>
               </Pressable>
             </View>
 
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: 999,
   },
   list: { gap: Spacing.two },
   userRow: {

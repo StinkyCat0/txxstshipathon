@@ -49,9 +49,9 @@ export function PostCard({
           <SymbolView
             name={post.liked_by_me ? 'heart.fill' : 'heart'}
             size={18}
-            tintColor={post.liked_by_me ? '#E0245E' : theme.textSecondary}
+            tintColor={post.liked_by_me ? theme.accent : theme.textSecondary}
             fallback={
-              <ThemedText style={{ color: post.liked_by_me ? '#E0245E' : theme.textSecondary }}>
+              <ThemedText style={{ color: post.liked_by_me ? theme.accent : theme.textSecondary }}>
                 ♥
               </ThemedText>
             }

@@ -2,6 +2,7 @@
  * Swipe tab: tinder-style deck. Top card is the LAST element of `deck`
  * (we pop from the end so the array order matches fetch order).
  */
+import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -23,13 +24,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProfileCard } from '@/components/profile-card';
 import { ProfileView } from '@/components/profile-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { api, type Profile } from '@/lib/api';
+import { api, mediaUrl, type Profile } from '@/lib/api';
+import { promptLabel } from '@/lib/prompts';
 import { useSession } from '@/lib/session';
 
 const SWIPE_THRESHOLD = 120;
@@ -91,11 +92,74 @@ function SwipeCard({
     ],
   }));
 
+  const photo = mediaUrl(profile.photos[0]);
+  const firstPrompt = profile.prompts[0];
+
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
-        style={[styles.card, { backgroundColor: theme.backgroundElement }, animatedStyle]}>
-        <ProfileCard user={profile} fill />
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.backgroundElement,
+            borderColor: theme.backgroundSelected,
+          },
+          animatedStyle,
+        ]}>
+        {/* Photo fills the top; floating pass/like buttons sit on the seam. */}
+        <View style={styles.cardPhoto}>
+          {photo ? (
+            <Image
+              source={{ uri: photo }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, styles.photoPlaceholder]}>
+              <ThemedText type="title" themeColor="textSecondary">
+                {profile.name.charAt(0)}
+              </ThemedText>
+            </View>
+          )}
+          <View style={styles.cardActions}>
+            <Pressable
+              accessibilityLabel="Pass"
+              onPress={() => fling('left')}
+              style={[styles.cardAction, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText style={styles.cardActionGlyph}>✕</ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Like"
+              onPress={() => fling('right')}
+              style={[styles.cardAction, { backgroundColor: theme.accentSoft }]}>
+              <ThemedText style={[styles.cardActionGlyph, { color: theme.accent }]}>
+                ♥
+              </ThemedText>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Info block: name/age, bio, first prompt — tap expands full profile. */}
+        <View style={styles.cardInfo}>
+          <ThemedText type="subtitle" style={styles.cardName}>
+            {profile.name}, {profile.age}
+          </ThemedText>
+          {!!profile.bio && (
+            <ThemedText themeColor="textSecondary" numberOfLines={2} style={styles.cardBio}>
+              {profile.bio}
+            </ThemedText>
+          )}
+          {!!firstPrompt && (
+            <ThemedView type="backgroundSelected" style={styles.promptCard}>
+              <ThemedText type="small" themeColor="textSecondary">
+                {promptLabel(firstPrompt.prompt_key)}
+              </ThemedText>
+              <ThemedText numberOfLines={2} style={styles.promptAnswer}>
+                {firstPrompt.answer}
+              </ThemedText>
+            </ThemedView>
+          )}
+        </View>
       </Animated.View>
     </GestureDetector>
   );
@@ -174,9 +238,20 @@ export default function SwipeScreen() {
                     style={[
                       styles.card,
                       styles.cardBehind,
-                      { backgroundColor: theme.backgroundElement },
+                      {
+                        backgroundColor: theme.backgroundElement,
+                        borderColor: theme.backgroundSelected,
+                      },
                     ]}>
-                    <ProfileCard user={next} fill />
+                    <View style={styles.cardPhoto}>
+                      {mediaUrl(next.photos[0]) ? (
+                        <Image
+                          source={{ uri: mediaUrl(next.photos[0]) }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                        />
+                      ) : null}
+                    </View>
                   </View>
                 )}
                 <SwipeCard
@@ -189,22 +264,7 @@ export default function SwipeScreen() {
             )}
           </View>
 
-          {top !== null && (
-            <View style={styles.buttons}>
-              <Pressable
-                accessibilityLabel="Pass"
-                onPress={() => handleSwiped('left')}
-                style={[styles.roundButton, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText style={styles.buttonGlyph}>✕</ThemedText>
-              </Pressable>
-              <Pressable
-                accessibilityLabel="Like"
-                onPress={() => handleSwiped('right')}
-                style={[styles.roundButton, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText style={[styles.buttonGlyph, styles.heart]}>♥</ThemedText>
-              </Pressable>
-            </View>
-          )}
+          {/* Pass/like live on the card itself; no bottom button row. */}
         </SafeAreaView>
       </ThemedView>
 
@@ -249,9 +309,9 @@ export default function SwipeScreen() {
                     if (expanded) swipeProfile(expanded, 'right');
                     setExpanded(null);
                   }}
-                  style={[styles.expandedButton, { backgroundColor: theme.text }]}>
-                  <ThemedText type="smallBold" style={{ color: theme.background }}>
-                    Match
+                  style={[styles.expandedButton, { backgroundColor: theme.accentSoft }]}>
+                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                    ♥ Match
                   </ThemedText>
                 </Pressable>
               </View>
@@ -279,11 +339,51 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: Spacing.four,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   cardBehind: {
     transform: [{ scale: 0.95 }],
   },
+  cardPhoto: { flex: 3 },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActions: {
+    position: 'absolute',
+    right: Spacing.three,
+    bottom: -22,
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  cardAction: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  cardActionGlyph: { fontSize: 20, lineHeight: 24 },
+  cardInfo: {
+    flex: 2,
+    padding: Spacing.three,
+    paddingTop: Spacing.four,
+    gap: Spacing.two,
+  },
+  cardName: { fontSize: 26, lineHeight: 32 },
+  cardBio: { fontSize: 15, lineHeight: 20 },
+  promptCard: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.half,
+  },
+  promptAnswer: { fontSize: 16, lineHeight: 22 },
   expanded: { flex: 1 },
   expandedSafe: { flex: 1, paddingHorizontal: Spacing.three },
   expandedScroll: { gap: Spacing.three, paddingBottom: Spacing.four },
@@ -296,23 +396,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: 999,
   },
-  buttons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.five,
-    paddingTop: Spacing.three,
-  },
-  roundButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonGlyph: { fontSize: 28, lineHeight: 34 },
-  heart: { color: '#e5484d' },
   empty: {
     flex: 1,
     alignItems: 'center',

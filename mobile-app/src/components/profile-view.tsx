@@ -44,7 +44,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
             contentFit="cover"
           />
         ) : (
-          <ThemedView key={`q${i}`} type="backgroundElement" style={styles.promptCard}>
+          <ThemedView key={`q${i}`} type="backgroundSelected" style={styles.promptCard}>
             <ThemedText type="small" themeColor="textSecondary">
               {promptLabel(profile.prompts[b.index].prompt_key)}
             </ThemedText>

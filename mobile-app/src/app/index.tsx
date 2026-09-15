@@ -13,6 +13,7 @@ import { PostModal } from '@/components/post-modal';
 import { ProfileModal } from '@/components/profile-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Wordmark } from '@/components/wordmark';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { api, type Post, type Profile } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -94,6 +95,9 @@ export default function FeedScreen() {
   return (
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <Wordmark width={110} />
+        </View>
         <FlatList
           data={posts}
           keyExtractor={(item) => String(item.id)}
@@ -140,6 +144,10 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
+  header: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
   list: {
     gap: Spacing.three,
     padding: Spacing.three,
