@@ -21,6 +21,9 @@ from models import (
     CommentOut,
     LeaderboardEntry,
     Match,
+    Message,
+    MessageIn,
+    MessageOut,
     Photo,
     Post,
     PostCreate,
@@ -413,6 +416,47 @@ def get_matches(user_id: int) -> list[dict]:
                 }
             )
         return out
+
+
+# ---------- messages (DMs between matches) ----------
+
+def get_match_or_404(session: Session, match_id: int) -> Match:
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(404, "match not found")
+    return match
+
+
+def require_match_member(match: Match, user_id: int) -> None:
+    if user_id not in (match.user_a, match.user_b):
+        raise HTTPException(403, "not a member of this match")
+
+
+@app.get("/matches/{match_id}/messages", response_model=list[MessageOut])
+def get_messages(match_id: int, user_id: int) -> list[MessageOut]:
+    with Session(engine) as session:
+        match = get_match_or_404(session, match_id)
+        require_match_member(match, user_id)
+        return session.exec(
+            select(Message)
+            .where(Message.match_id == match_id)
+            .order_by(Message.created_at)
+        ).all()
+
+
+@app.post("/matches/{match_id}/messages", response_model=MessageOut)
+def send_message(match_id: int, user_id: int, body: MessageIn) -> MessageOut:
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(400, "empty message")
+    with Session(engine) as session:
+        match = get_match_or_404(session, match_id)
+        require_match_member(match, user_id)
+        msg = Message(match_id=match_id, sender_id=user_id, text=text)
+        session.add(msg)
+        session.commit()
+        session.refresh(msg)
+        return msg
 
 
 # ---------- leaderboard ----------

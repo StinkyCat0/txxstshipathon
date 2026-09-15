@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Tabs, TabList, TabSlot, TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PostComposerModal } from './post-composer';
@@ -74,12 +74,17 @@ export default function AppTabs() {
           ]}>
           <ThemedText style={[styles.plusGlyph, { color: theme.accent }]}>+</ThemedText>
         </Pressable>
-
         <TabTrigger name="leaderboard" href="/leaderboard" asChild>
           <TabItem icon="heart" label="Matches" />
         </TabTrigger>
+        <TabTrigger name="messages" href="/messages" asChild>
+          <TabItem icon="paperplane" label="Messages" />
+        </TabTrigger>
+
+        {/* Profile stays a registered route but renders no tab item —
+            it's reached from the avatar in the feed header. */}
         <TabTrigger name="profile" href="/profile" asChild>
-          <TabItem icon="person.crop.circle" label="Profile" />
+          <View style={styles.hidden} />
         </TabTrigger>
       </TabList>
       <PostComposerModal
@@ -118,5 +123,6 @@ const styles = StyleSheet.create({
     marginTop: -Spacing.four,
     marginHorizontal: Spacing.two,
   },
+  hidden: { width: 0, height: 0, overflow: 'hidden' },
   plusGlyph: { fontSize: 30, lineHeight: 34, fontWeight: 500 },
 });

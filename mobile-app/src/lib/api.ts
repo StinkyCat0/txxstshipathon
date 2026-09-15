@@ -89,11 +89,18 @@ export interface LeaderboardEntry {
   right_swipes_received: number;
   score: number;
 }
-
 export interface MatchEntry {
   match_id: number;
   matched_at: string;
   profile: Profile;
+}
+
+export interface Message {
+  id: number;
+  match_id: number;
+  sender_id: number;
+  text: string;
+  created_at: string;
 }
 
 // ---------- request helper ----------
@@ -198,8 +205,13 @@ export const api = {
       swiped_id: swipedId,
       direction,
     }),
-
   getMatches: (userId: number) => req<MatchEntry[]>('GET', `/users/${userId}/matches`),
+
+  getMessages: (matchId: number, userId: number) =>
+    req<Message[]>('GET', `/matches/${matchId}/messages?user_id=${userId}`),
+
+  sendMessage: (matchId: number, userId: number, text: string) =>
+    req<Message>('POST', `/matches/${matchId}/messages?user_id=${userId}`, { text }),
 
   getLeaderboard: () => req<LeaderboardEntry[]>('GET', '/leaderboard'),
 };

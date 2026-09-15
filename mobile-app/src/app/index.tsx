@@ -2,9 +2,10 @@
  * Feed tab: composer + list of posts from other users.
  * Pull-to-refresh, refetch on focus, like toggles, comment thread modal.
  */
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/post-card';
@@ -15,16 +16,20 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Wordmark } from '@/components/wordmark';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { api, type Post, type Profile } from '@/lib/api';
+import { useTheme } from '@/hooks/use-theme';
+import { api, mediaUrl, type Post, type Profile } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
 export default function FeedScreen() {
   const { userId } = useSession();
+  const theme = useTheme();
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [viewing, setViewing] = useState<Profile | null>(null);
   const [openPost, setOpenPost] = useState<Post | null>(null);
+  const [me, setMe] = useState<Profile | null>(null);
 
   const load = useCallback(
     async (initial = false) => {
@@ -47,6 +52,12 @@ export default function FeedScreen() {
       load(posts.length === 0);
     }, [load]),
   );
+
+  // Own profile for the header avatar.
+  useEffect(() => {
+    if (!userId) return;
+    api.getProfile(userId).then(setMe).catch(() => {});
+  }, [userId]);
 
   const onLike = async (post: Post) => {
     if (userId === null || userId === 0) return;
@@ -91,12 +102,21 @@ export default function FeedScreen() {
     setPosts((prev) => prev.map(bump));
     setOpenPost((prev) => (prev ? bump(prev) : prev));
   };
-
   return (
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
           <Wordmark width={110} />
+          <Pressable
+            accessibilityLabel="Your profile"
+            onPress={() => router.navigate('/profile')}
+            hitSlop={8}>
+            <Image
+              source={{ uri: mediaUrl(me?.photos[0]) }}
+              style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}
+              contentFit="cover"
+            />
+          </Pressable>
         </View>
         <FlatList
           data={posts}
@@ -145,9 +165,13 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
+  avatar: { width: 32, height: 32, borderRadius: 16 },
   list: {
     gap: Spacing.three,
     padding: Spacing.three,

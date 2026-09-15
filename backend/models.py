@@ -93,6 +93,15 @@ class PostLike(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class Message(SQLModel, table=True):
+    """A DM between two matched users."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    match_id: int = Field(foreign_key="match.id", index=True)
+    sender_id: int = Field(foreign_key="user.id", index=True)
+    text: str
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 # ---------- response schemas (not tables) ----------
 
 class UserCreate(SQLModel):
@@ -178,6 +187,17 @@ class LeaderboardEntry(SQLModel):
     post_likes: int
     right_swipes_received: int
     score: int
+
+class MessageIn(SQLModel):
+    text: str
+
+
+class MessageOut(SQLModel):
+    id: int
+    match_id: int
+    sender_id: int
+    text: str
+    created_at: datetime
 
 
 def create_db_and_tables() -> None:
