@@ -3,14 +3,21 @@
 Profile photos: drop real images in seed-photos/ named by user index
 (1.jpg, 2.png, ...; add -1, -2 suffixes for extra photos per user).
 Falls back to generated initial avatars when no file matches.
+Post photos: drop real images in post-photos/ (any names) and they are dealt
+out to the posts that carry an image. Falls back to generated placeholder
+cards when the directory is empty.
+
+Repoint an existing feed at post-photos/ without resetting anything:
+    python3 seed.py --post-photos
 """
 import hashlib
 import random
 import shutil
+import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
-from sqlmodel import Session, delete
+from sqlmodel import Session, delete, select
 
 from models import (
     UPLOADS_DIR,
@@ -27,6 +34,8 @@ from models import (
 )
 
 SEED_PHOTOS_DIR = Path(__file__).parent / "seed-photos"
+POST_PHOTOS_DIR = Path(__file__).parent / "post-photos"
+PHOTO_EXTS = ("jpg", "jpeg", "png", "webp")
 
 random.seed(42)
 
@@ -192,6 +201,47 @@ def make_post_image(path, color, label):
     img.save(path)
 
 
+def post_photos():
+    """Real photos dropped in post-photos/, in filename order (empty if none)."""
+    return sorted(
+        (p for ext in PHOTO_EXTS for p in POST_PHOTOS_DIR.glob(f"*.{ext}")),
+        key=lambda p: p.name,
+    )
+
+
+def copy_post_photo(src, tag):
+    """Copy a post photo into uploads/ and return its filename.
+
+    Content-hashed so clients' image caches (expo-image) can't serve a stale
+    picture for the same URL when a slot is reassigned.
+    """
+    digest = hashlib.md5(src.read_bytes()).hexdigest()[:8]
+    fname = f"seed_post_{tag}_{digest}{src.suffix}"
+    shutil.copy(src, UPLOADS_DIR / fname)
+    return fname
+
+
+def refresh_post_images():
+    """Point the posts that have an image at post-photos/, in rotation.
+
+    Same assignment the full seed does, minus the reset: existing posts,
+    comments, likes and matches stay put.
+    """
+    photos = post_photos()
+    if not photos:
+        print(f"no photos in {POST_PHOTOS_DIR} -- nothing to do")
+        return
+    with Session(engine) as s:
+        posts = s.exec(
+            select(Post).where(Post.image_path.is_not(None)).order_by(Post.id)
+        ).all()
+        for k, post in enumerate(posts):
+            post.image_path = copy_post_photo(photos[k % len(photos)], post.id)
+            s.add(post)
+        s.commit()
+        print(f"post images: {len(posts)} posts <- {len(photos)} photos")
+
+
 def main():
     create_db_and_tables()
 
@@ -218,7 +268,7 @@ def main():
             # Real photos from seed-photos/<n>.<ext> and <n>-<k>.<ext> win
             # over generated avatars.
             provided = sorted(
-                p for ext in ("jpg", "jpeg", "png", "webp")
+                p for ext in PHOTO_EXTS
                 for p in SEED_PHOTOS_DIR.glob(f"{i + 1}*.{ext}")
             )
             n_photos = max(len(provided), 1 + (i % 2))
@@ -263,16 +313,24 @@ def main():
         s.commit()
 
         # posts: each user gets 1-2, roughly half with an image
+        photos = post_photos()
+        n_post_photos = 0
         posts = []
         for i, u in enumerate(users):
             for j in range(1 + (i % 2)):
                 text = random.choice(POST_TEXTS)
                 image_path = None
                 if random.random() < 0.5:
-                    image_path = f"seed_post_{u.id}_{j}.png"
-                    make_post_image(UPLOADS_DIR / image_path,
-                                    COLORS[(i + j) % len(COLORS)],
-                                    u.name.upper())
+                    if photos:
+                        # A real photo from post-photos/ beats the placeholder.
+                        image_path = copy_post_photo(
+                            photos[n_post_photos % len(photos)], f"{u.id}_{j}")
+                    else:
+                        image_path = f"seed_post_{u.id}_{j}.png"
+                        make_post_image(UPLOADS_DIR / image_path,
+                                        COLORS[(i + j) % len(COLORS)],
+                                        u.name.upper())
+                    n_post_photos += 1
                 posts.append(Post(user_id=u.id, text=text, image_path=image_path))
                 s.add(posts[-1])
         s.commit()
@@ -307,8 +365,13 @@ def main():
         print(f"users={len(users)} photos={n_photos_total} "
               f"prompts={n_prompts_total} swipes={len(swipes)} "
               f"matches={len(mutuals)} posts={len(posts)} "
+              f"post-photos={n_post_photos} "
               f"comments={n_comments} replies={n_replies} likes={len(likes)}")
 
 
 if __name__ == "__main__":
-    main()
+    if "--post-photos" in sys.argv:
+        create_db_and_tables()
+        refresh_post_images()
+    else:
+        main()
