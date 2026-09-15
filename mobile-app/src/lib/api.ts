@@ -34,6 +34,7 @@ export interface UserSummary {
   id: number;
   name: string;
   age: number;
+  bio: string;
   photo: string | null;
 }
 

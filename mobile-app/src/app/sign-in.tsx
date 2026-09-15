@@ -1,9 +1,9 @@
 /**
- * Sign-in: dev user-switcher. Lists seeded users; tapping one signs in.
- * A "Create account" form posts a new user and signs in as them.
+ * Sign-in: auto-advancing carousel of profile cards; tapping one signs in.
+ * "Log in" reveals the user picker; "Create account" posts a new user.
  */
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,15 +14,20 @@ import {
   StyleSheet,
   TextInput,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProfileCard } from '@/components/profile-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 import { api, mediaUrl, type UserSummary } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { useTheme } from '@/hooks/use-theme';
+
+const AUTO_ADVANCE_MS = 3500;
 
 export default function SignInScreen() {
   const theme = useTheme();
@@ -30,6 +35,7 @@ export default function SignInScreen() {
   const [users, setUsers] = useState<UserSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const [name, setName] = useState('');
@@ -38,12 +44,39 @@ export default function SignInScreen() {
   const [gender, setGender] = useState('');
   const [interestedIn, setInterestedIn] = useState('');
 
+  // Carousel state: measured width, current page, touch-pause flag.
+  const listRef = useRef<FlatList<UserSummary>>(null);
+  const [cardWidth, setCardWidth] = useState(0);
+  const pageRef = useRef(0);
+  const holding = useRef(false);
+
   useEffect(() => {
     api
       .listUsers()
       .then(setUsers)
       .catch((e) => setError(String(e)));
   }, []);
+
+  // Auto-advance while the user isn't touching the carousel.
+  useEffect(() => {
+    const count = users?.length ?? 0;
+    if (count < 2 || cardWidth === 0) return;
+    const timer = setInterval(() => {
+      if (holding.current) return;
+      const next = pageRef.current + 1;
+      if (next < count) {
+        listRef.current?.scrollToOffset({ offset: next * cardWidth, animated: true });
+      } else {
+        // Wrap: jump back to the first card without a rewind animation.
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }
+    }, AUTO_ADVANCE_MS);
+    return () => clearInterval(timer);
+  }, [users, cardWidth]);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    pageRef.current = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+  };
 
   const submitCreate = async () => {
     const ageNum = Number(age);
@@ -82,7 +115,9 @@ export default function SignInScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <ThemedText type="title">PUBLIC</ThemedText>
+              <ThemedText type="title" style={styles.brand}>
+                risqué
+              </ThemedText>
               <ThemedText themeColor="textSecondary">dating, but everyone can see</ThemedText>
             </View>
 
@@ -91,6 +126,59 @@ export default function SignInScreen() {
             {users === null && !error ? (
               <ActivityIndicator style={styles.loading} />
             ) : (
+              <View
+                onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+                style={styles.carousel}>
+                {cardWidth > 0 && (
+                  <FlatList
+                    ref={listRef}
+                    data={users ?? []}
+                    keyExtractor={(u) => String(u.id)}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onScroll={onScroll}
+                    scrollEventThrottle={32}
+                    onScrollBeginDrag={() => (holding.current = true)}
+                    onMomentumScrollEnd={() => (holding.current = false)}
+                    renderItem={({ item }) => (
+                      <View style={{ width: cardWidth }}>
+                        <ProfileCard user={item} onPress={() => signIn(item.id)} />
+                      </View>
+                    )}
+                  />
+                )}
+              </View>
+            )}
+
+            <View style={styles.buttonRow}>
+              <Pressable
+                onPress={() => {
+                  setLoggingIn((v) => !v);
+                  setCreating(false);
+                }}
+                style={({ pressed }) => [
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && { backgroundColor: theme.backgroundSelected },
+                ]}>
+                <ThemedText type="smallBold">Log in</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setCreating((c) => !c);
+                  setLoggingIn(false);
+                }}
+                style={({ pressed }) => [
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && { backgroundColor: theme.backgroundSelected },
+                ]}>
+                <ThemedText type="smallBold">Create account</ThemedText>
+              </Pressable>
+            </View>
+
+            {loggingIn && (
               <FlatList
                 data={users ?? []}
                 keyExtractor={(u) => String(u.id)}
@@ -116,16 +204,6 @@ export default function SignInScreen() {
                 )}
               />
             )}
-
-            <Pressable
-              onPress={() => setCreating((c) => !c)}
-              style={({ pressed }) => [
-                styles.createButton,
-                { backgroundColor: theme.backgroundElement },
-                pressed && { backgroundColor: theme.backgroundSelected },
-              ]}>
-              <ThemedText type="smallBold">Create account</ThemedText>
-            </Pressable>
 
             {creating && (
               <ThemedView type="backgroundElement" style={styles.form}>
@@ -197,8 +275,18 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.three, paddingBottom: Spacing.six },
   header: { gap: Spacing.one, marginBottom: Spacing.two },
+  // Placeholder wordmark: serif italic until a real brand font is picked.
+  brand: { fontFamily: Fonts.serif, fontStyle: 'italic' },
   error: { color: '#d33' },
   loading: { marginVertical: Spacing.four },
+  carousel: { marginHorizontal: Spacing.three },
+  buttonRow: { flexDirection: 'row', gap: Spacing.two },
+  button: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
   list: { gap: Spacing.two },
   userRow: {
     flexDirection: 'row',
@@ -208,11 +296,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
   },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#888' },
-  createButton: {
-    alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
   form: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.two },
   input: { borderRadius: Spacing.two, padding: Spacing.three, fontSize: 16 },
   multiline: { minHeight: 72, textAlignVertical: 'top' },

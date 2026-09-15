@@ -184,6 +184,7 @@ def list_users() -> list[dict]:
                 "id": u.id,
                 "name": u.name,
                 "age": u.age,
+                "bio": u.bio,
                 "photo": (photo_urls(session, u.id) or [None])[0],
             }
             for u in users

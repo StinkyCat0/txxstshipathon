@@ -48,6 +48,17 @@
                        --set-rpath "$(dirname "$bin"):${devtoolsLibs}" "$bin" 2>/dev/null || true
             done
           '' + ''
+            # pillow-heif's native module needs libstdc++ at runtime (NixOS).
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          '' + ''
+            # Advertise Metro on the Tailscale IP so devices on the tailnet
+            # reach it; the app's API client reads EXPO_PUBLIC_API_URL.
+            TS_IP="$(tailscale ip -4 2>/dev/null | head -n1 || true)"
+            if [ -n "$TS_IP" ]; then
+              export REACT_NATIVE_PACKAGER_HOSTNAME="$TS_IP"
+              export EXPO_PUBLIC_API_URL="http://$TS_IP:8001"
+              echo "tailscale: Metro exp://$TS_IP:8081, API $EXPO_PUBLIC_API_URL"
+            fi
             echo "dev shell: node $(node --version), uv $(uv --version)"
           '';
         };

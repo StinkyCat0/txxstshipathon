@@ -4,7 +4,7 @@
  */
 import { Image } from 'expo-image';
 import { Modal, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -66,16 +66,20 @@ export function ProfileModal({
 }) {
   return (
     <Modal visible={!!profile} animationType="slide" onRequestClose={onClose}>
-      <ThemedView style={styles.modal}>
-        <SafeAreaView style={styles.modalSafe}>
-          <ThemedText type="linkPrimary" onPress={onClose} style={styles.close}>
-            Close
-          </ThemedText>
-          <ScrollView contentContainerStyle={styles.scroll}>
-            {profile && <ProfileView profile={profile} />}
-          </ScrollView>
-        </SafeAreaView>
-      </ThemedView>
+      {/* Modals get their own window on iOS — a nested provider is required
+          for SafeAreaView to see the modal's insets. */}
+      <SafeAreaProvider>
+        <ThemedView style={styles.modal}>
+          <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom']}>
+            <ThemedText type="linkPrimary" onPress={onClose} style={styles.close}>
+              Close
+            </ThemedText>
+            <ScrollView contentContainerStyle={styles.scroll}>
+              {profile && <ProfileView profile={profile} />}
+            </ScrollView>
+          </SafeAreaView>
+        </ThemedView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

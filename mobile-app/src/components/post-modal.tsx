@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/post-card';
 import { ThemedText } from '@/components/themed-text';
@@ -132,7 +132,10 @@ export function PostModal({
   return (
     <Modal visible={!!post} animationType="slide" onRequestClose={onClose}>
       <ThemedView style={styles.modal}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {/* Modals get their own window on iOS — a nested provider is required
+            for SafeAreaView to see the modal's insets. */}
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.topBar}>
             <ThemedText type="linkPrimary" onPress={onClose}>
               Close
@@ -213,7 +216,8 @@ export function PostModal({
               </Pressable>
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+          </SafeAreaView>
+        </SafeAreaProvider>
       </ThemedView>
     </Modal>
   );

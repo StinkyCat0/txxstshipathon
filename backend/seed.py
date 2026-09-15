@@ -1,5 +1,13 @@
-"""Seed the database with demo data. Run: python3 seed.py (from backend/)."""
+"""Seed the database with demo data. Run: python3 seed.py (from backend/).
+
+Profile photos: drop real images in seed-photos/ named by user index
+(1.jpg, 2.png, ...; add -1, -2 suffixes for extra photos per user).
+Falls back to generated initial avatars when no file matches.
+"""
+import hashlib
 import random
+import shutil
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from sqlmodel import Session, delete
@@ -17,6 +25,8 @@ from models import (
     create_db_and_tables,
     engine,
 )
+
+SEED_PHOTOS_DIR = Path(__file__).parent / "seed-photos"
 
 random.seed(42)
 
@@ -205,12 +215,26 @@ def main():
 
             initials = "".join(p[0] for p in name.split())[:2].upper()
             color = COLORS[i % len(COLORS)]
-            n_photos = 1 + (i % 2)
+            # Real photos from seed-photos/<n>.<ext> and <n>-<k>.<ext> win
+            # over generated avatars.
+            provided = sorted(
+                p for ext in ("jpg", "jpeg", "png", "webp")
+                for p in SEED_PHOTOS_DIR.glob(f"{i + 1}*.{ext}")
+            )
+            n_photos = max(len(provided), 1 + (i % 2))
             n_photos_total += n_photos
             for j in range(n_photos):
-                fname = f"seed_{u.id}_{j}.png"
-                make_avatar(UPLOADS_DIR / fname, initials,
-                            color if j == 0 else shade(color, 0.75))
+                if j < len(provided):
+                    src = provided[j]
+                    # Content-hash the filename so clients' image caches
+                    # (expo-image) can't serve a stale avatar for the same URL.
+                    digest = hashlib.md5(src.read_bytes()).hexdigest()[:8]
+                    fname = f"seed_{u.id}_{j}_{digest}{src.suffix}"
+                    shutil.copy(src, UPLOADS_DIR / fname)
+                else:
+                    fname = f"seed_{u.id}_{j}.png"
+                    make_avatar(UPLOADS_DIR / fname, initials,
+                                color if j == 0 else shade(color, 0.75))
                 s.add(Photo(user_id=u.id, path=fname, sort_order=j))
 
             keys = random.sample(list(PROMPT_ANSWERS), 3)

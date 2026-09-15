@@ -2,10 +2,16 @@
  * Swipe tab: tinder-style deck. Top card is the LAST element of `deck`
  * (we pop from the end so the array order matches fetch order).
  */
-import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -15,15 +21,15 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProfileCard } from '@/components/profile-card';
 import { ProfileView } from '@/components/profile-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { api, mediaUrl, type Profile } from '@/lib/api';
-import { promptLabel } from '@/lib/prompts';
+import { api, type Profile } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
 const SWIPE_THRESHOLD = 120;
@@ -34,9 +40,11 @@ type Direction = 'left' | 'right';
 function SwipeCard({
   profile,
   onSwiped,
+  onExpand,
 }: {
   profile: Profile;
   onSwiped: (direction: Direction) => void;
+  onExpand: () => void;
 }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
@@ -69,6 +77,12 @@ function SwipeCard({
       }
     });
 
+  const tap = Gesture.Tap().onEnd((_e, success) => {
+    if (success) runOnJS(onExpand)();
+  });
+
+  const gesture = Gesture.Exclusive(pan, tap);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
@@ -77,34 +91,11 @@ function SwipeCard({
     ],
   }));
 
-  const photo = mediaUrl(profile.photos[0]);
-  const firstPrompt = profile.prompts[0];
-
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.card, { backgroundColor: theme.backgroundElement }, animatedStyle]}>
-        {photo ? (
-          <>
-            <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <View style={styles.cardOverlay}>
-              <ThemedText type="subtitle" style={styles.overlayName}>
-                {profile.name}, {profile.age}
-              </ThemedText>
-              {!!firstPrompt && (
-                <View style={styles.overlayPrompt}>
-                  <ThemedText type="small" style={styles.overlayPromptLabel}>
-                    {promptLabel(firstPrompt.prompt_key)}
-                  </ThemedText>
-                  <ThemedText style={styles.overlayAnswer}>{firstPrompt.answer}</ThemedText>
-                </View>
-              )}
-            </View>
-          </>
-        ) : (
-          <View style={styles.cardBody}>
-            <ProfileView profile={profile} />
-          </View>
-        )}
+    <GestureDetector gesture={gesture}>
+      <Animated.View
+        style={[styles.card, { backgroundColor: theme.backgroundElement }, animatedStyle]}>
+        <ProfileCard user={profile} fill />
       </Animated.View>
     </GestureDetector>
   );
@@ -116,6 +107,7 @@ export default function SwipeScreen() {
   const [deck, setDeck] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [match, setMatch] = useState<Profile | null>(null);
+  const [expanded, setExpanded] = useState<Profile | null>(null);
   const topRef = useRef<Profile | null>(null);
 
   const load = useCallback(() => {
@@ -138,11 +130,10 @@ export default function SwipeScreen() {
   const next = deck.length > 1 ? deck[deck.length - 2] : null;
   topRef.current = top;
 
-  const handleSwiped = useCallback(
-    (direction: Direction) => {
-      const swiped = topRef.current;
-      if (!swiped || !userId) return;
-      setDeck((d) => d.slice(0, -1));
+  const swipeProfile = useCallback(
+    (swiped: Profile, direction: Direction) => {
+      if (!userId) return;
+      setDeck((d) => d.filter((p) => p.id !== swiped.id));
       api
         .swipe(userId, swiped.id, direction)
         .then((res) => {
@@ -151,6 +142,14 @@ export default function SwipeScreen() {
         .catch(() => {});
     },
     [userId],
+  );
+
+  const handleSwiped = useCallback(
+    (direction: Direction) => {
+      const swiped = topRef.current;
+      if (swiped) swipeProfile(swiped, direction);
+    },
+    [swipeProfile],
   );
 
   return (
@@ -171,21 +170,21 @@ export default function SwipeScreen() {
             ) : (
               <>
                 {next && (
-                  <View style={[styles.card, styles.cardBehind, { backgroundColor: theme.backgroundElement }]}>
-                    {mediaUrl(next.photos[0]) ? (
-                      <Image
-                        source={{ uri: mediaUrl(next.photos[0]) }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <View style={styles.cardBody}>
-                        <ProfileView profile={next} />
-                      </View>
-                    )}
+                  <View
+                    style={[
+                      styles.card,
+                      styles.cardBehind,
+                      { backgroundColor: theme.backgroundElement },
+                    ]}>
+                    <ProfileCard user={next} fill />
                   </View>
                 )}
-                <SwipeCard key={top.id} profile={top} onSwiped={handleSwiped} />
+                <SwipeCard
+                  key={top.id}
+                  profile={top}
+                  onSwiped={handleSwiped}
+                  onExpand={() => setExpanded(top)}
+                />
               </>
             )}
           </View>
@@ -226,6 +225,40 @@ export default function SwipeScreen() {
           </ThemedView>
         </View>
       </Modal>
+
+      {/* Expanded profile: full ProfileView with match / go-back actions.
+          Nested provider — modals get their own window on iOS. */}
+      <Modal
+        visible={!!expanded}
+        animationType="slide"
+        onRequestClose={() => setExpanded(null)}>
+        <SafeAreaProvider>
+          <ThemedView style={styles.expanded}>
+            <SafeAreaView style={styles.expandedSafe} edges={['top', 'bottom']}>
+              <ScrollView contentContainerStyle={styles.expandedScroll}>
+                {expanded && <ProfileView profile={expanded} />}
+              </ScrollView>
+              <View style={styles.expandedButtons}>
+                <Pressable
+                  onPress={() => setExpanded(null)}
+                  style={[styles.expandedButton, { backgroundColor: theme.backgroundElement }]}>
+                  <ThemedText type="smallBold">Go back</ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (expanded) swipeProfile(expanded, 'right');
+                    setExpanded(null);
+                  }}
+                  style={[styles.expandedButton, { backgroundColor: theme.text }]}>
+                  <ThemedText type="smallBold" style={{ color: theme.background }}>
+                    Match
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </SafeAreaView>
+          </ThemedView>
+        </SafeAreaProvider>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -251,20 +284,20 @@ const styles = StyleSheet.create({
   cardBehind: {
     transform: [{ scale: 0.95 }],
   },
-  cardOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: Spacing.four,
+  expanded: { flex: 1 },
+  expandedSafe: { flex: 1, paddingHorizontal: Spacing.three },
+  expandedScroll: { gap: Spacing.three, paddingBottom: Spacing.four },
+  expandedButtons: {
+    flexDirection: 'row',
     gap: Spacing.two,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingVertical: Spacing.two,
   },
-  overlayName: { color: '#fff' },
-  overlayPrompt: { gap: Spacing.half },
-  overlayPromptLabel: { color: 'rgba(255,255,255,0.8)' },
-  overlayAnswer: { color: '#fff', fontSize: 18, lineHeight: 26 },
-  cardBody: { flex: 1, padding: Spacing.three },
+  expandedButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
   buttons: {
     flexDirection: 'row',
     justifyContent: 'center',
